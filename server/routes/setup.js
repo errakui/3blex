@@ -10,12 +10,12 @@ const bcrypt = require('bcryptjs')
 const fs = require('fs')
 const path = require('path')
 
-// Connection pool dal database Fly.io
+// Connection pool - use SSL for production databases
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('fly.dev') || process.env.DATABASE_URL?.includes('flympg.net') ? {
+  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
     rejectUnauthorized: false
-  } : false
+  }
 })
 
 // Prodotti Mellow
