@@ -164,7 +164,7 @@ router.get('/upline', async (req, res) => {
       success: false,
       message: 'Errore nel recupero della upline'
     });
-  }
+        }
 });
 
 /**
@@ -209,7 +209,7 @@ router.get('/dashboard', async (req, res) => {
     
     // Calcola statistiche aggiuntive
     const activeDirects = directs.filter(d => d.status === 'active').length;
-    
+
     res.json({
       success: true,
       dashboard: {

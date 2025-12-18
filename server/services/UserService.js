@@ -75,13 +75,36 @@ class UserService {
       
       const user = userResult.rows[0];
       
-      // Registra relazione sponsor
+      // Registra relazione sponsor (nella stessa transazione)
       if (sponsorId) {
-        await SponsorTreeService.registerSponsor(user.id, sponsorId);
+        await client.query(
+          `INSERT INTO sponsor_tree (user_id, sponsor_id) VALUES ($1, $2)`,
+          [user.id, sponsorId]
+        );
+        // Aggiorna closure table
+        await client.query(
+          `INSERT INTO sponsor_tree_closure (ancestor_id, descendant_id, depth)
+           SELECT ancestor_id, $1, depth + 1
+           FROM sponsor_tree_closure
+           WHERE descendant_id = $2
+           UNION ALL
+           SELECT $1, $1, 0`,
+          [user.id, sponsorId]
+        );
+      } else {
+        // Se non c'è sponsor, l'utente è radice della sua linea
+        await client.query(
+          `INSERT INTO sponsor_tree_closure (ancestor_id, descendant_id, depth)
+           VALUES ($1, $1, 0)`,
+          [user.id]
+        );
       }
       
-      // Crea wallet
-      await WalletService.createWallet(user.id);
+      // Crea wallet (nella stessa transazione)
+      await client.query(
+        `INSERT INTO wallets (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`,
+        [user.id]
+      );
       
       // Notifica di benvenuto
       await client.query(
