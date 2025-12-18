@@ -5,8 +5,11 @@
 
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const UserService = require('../services/UserService');
+const EmailService = require('../services/EmailService');
 const { authenticateToken } = require('../middleware/auth');
+const pool = require('../db');
 
 const router = express.Router();
 
@@ -38,6 +41,26 @@ router.post('/register', async (req, res) => {
       referralCode
     );
     
+    // Genera token di verifica email
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ore
+    
+    // Salva il token nel database
+    await pool.query(
+      `UPDATE users SET 
+        email_verification_token = $1, 
+        email_verification_expires = $2,
+        email_verified = false
+       WHERE id = $3`,
+      [verificationToken, tokenExpiry, user.id]
+    );
+    
+    // Invia email di verifica
+    await EmailService.sendVerificationEmail(
+      { email: user.email, firstName: user.firstName },
+      verificationToken
+    );
+    
     // Genera token JWT
     const token = jwt.sign(
       { id: user.id, email: user.email, role: 'affiliate' },
@@ -47,9 +70,10 @@ router.post('/register', async (req, res) => {
     
     res.status(201).json({
       success: true,
-      message: 'Registrazione completata! Acquista un pack di attivazione per iniziare.',
+      message: 'Registrazione completata! Controlla la tua email per verificare l\'account.',
       user,
-      token
+      token,
+      emailSent: true
     });
     
   } catch (error) {

@@ -34,6 +34,7 @@ const invoicesRoutes = require('./server/routes/invoices')
 const trackingRoutes = require('./server/routes/tracking')
 const broadcastRoutes = require('./server/routes/broadcast')
 const commissionsRoutes = require('./server/routes/commissions')
+const emailVerificationRoutes = require('./server/routes/emailVerification')
 const setupRoutes = require('./server/routes/setup') // ⚠️ TEMPORANEO - rimuovere dopo setup
 
 const dev = process.env.NODE_ENV !== 'production'
@@ -98,6 +99,8 @@ app.prepare().then(() => {
   server.use('/api/tracking', trackingRoutes)
   server.use('/api/broadcast', broadcastRoutes)
   server.use('/api/commissions', commissionsRoutes)
+  server.use('/api/auth', emailVerificationRoutes) // Email verification routes
+  server.use('/api/email', emailVerificationRoutes) // Email test routes
   server.use('/api', setupRoutes) // ⚠️ TEMPORANEO - rimuovere dopo setup
 
   // Health check
