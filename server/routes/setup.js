@@ -214,15 +214,15 @@ router.post('/setup-database', async (req, res) => {
 
     if (existingAdmin.rows.length > 0) {
       await pool.query(
-        'UPDATE users SET password_hash = $1, role = $2, subscription_status = $3, kyc_status = $4 WHERE email = $5',
+        'UPDATE users SET password_hash = $1, role = $2, status = $3, kyc_status = $4 WHERE email = $5',
         [hashedPassword, 'admin', 'active', 'approved', adminEmail]
       )
       results.admin = { email: adminEmail, password: adminPassword, action: 'updated' }
     } else {
       await pool.query(
-        `INSERT INTO users (email, password_hash, name, role, subscription_status, kyc_status, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, NOW())`,
-        [adminEmail, hashedPassword, 'Admin', 'admin', 'active', 'approved']
+        `INSERT INTO users (email, password_hash, first_name, last_name, role, status, kyc_status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+        [adminEmail, hashedPassword, 'Admin', '3Blex', 'admin', 'active', 'approved']
       )
       results.admin = { email: adminEmail, password: adminPassword, action: 'created' }
     }
