@@ -146,7 +146,8 @@ router.post('/setup-database', async (req, res) => {
     const schemaFiles = [
       path.join(__dirname, '../db/schema.sql'),
       path.join(__dirname, '../db/schema_extended.sql'),
-      path.join(__dirname, '../db/schema_broadcast.sql')
+      path.join(__dirname, '../db/schema_broadcast.sql'),
+      path.join(__dirname, '../db/schema_email_updates.sql')
     ]
 
     for (const schemaFile of schemaFiles) {
