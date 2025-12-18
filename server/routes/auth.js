@@ -55,11 +55,17 @@ router.post('/register', async (req, res) => {
       [verificationToken, tokenExpiry, user.id]
     );
     
-    // Invia email di verifica
-    await EmailService.sendVerificationEmail(
-      { email: user.email, firstName: user.firstName },
-      verificationToken
-    );
+    // Invia email di verifica (non blocca la registrazione se fallisce)
+    let emailSent = false;
+    try {
+      emailSent = await EmailService.sendVerificationEmail(
+        { email: user.email, firstName: user.firstName },
+        verificationToken
+      );
+    } catch (emailError) {
+      console.error('Error sending verification email:', emailError.message);
+      // Non blocca la registrazione, l'utente può richiedere l'email dopo
+    }
     
     // Genera token JWT
     const token = jwt.sign(
@@ -70,10 +76,12 @@ router.post('/register', async (req, res) => {
     
     res.status(201).json({
       success: true,
-      message: 'Registrazione completata! Controlla la tua email per verificare l\'account.',
+      message: emailSent 
+        ? 'Registrazione completata! Controlla la tua email per verificare l\'account.'
+        : 'Registrazione completata! Puoi richiedere l\'email di verifica dalla pagina impostazioni.',
       user,
       token,
-      emailSent: true
+      emailSent
     });
     
   } catch (error) {
