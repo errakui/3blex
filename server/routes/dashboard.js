@@ -47,7 +47,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     // Get recent commissions
     const commissionsResult = await pool.query(
-      `SELECT type, amount, status, created_at, description
+      `SELECT type, amount, status, created_at
        FROM commissions 
        WHERE user_id = $1 
        ORDER BY created_at DESC 
