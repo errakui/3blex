@@ -168,9 +168,13 @@ function RegisterPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-brand-500 to-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-            <span className="text-white text-3xl font-bold">3B</span>
-          </div>
+          <Image 
+            src="/assets/logo.png" 
+            alt="3Blex Logo" 
+            width={80} 
+            height={80} 
+            className="mx-auto mb-4 rounded-2xl shadow-lg shadow-brand-500/30"
+          />
           <h1 className="text-2xl font-bold text-slate-900 mb-2">
             Crea il tuo account
           </h1>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { 
   ArrowRight, 
@@ -38,9 +39,13 @@ export default function HomePage() {
       }`}>
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg shadow-violet-500/30">
-              3B
-            </div>
+            <Image 
+              src="/assets/logo.png" 
+              alt="3Blex Logo" 
+              width={48} 
+              height={48} 
+              className="rounded-xl shadow-lg shadow-violet-500/30"
+            />
             <span className="text-2xl font-bold bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
               3Blex
             </span>
@@ -418,9 +423,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-xl flex items-center justify-center font-bold shadow-lg">
-                3B
-              </div>
+              <Image 
+                src="/assets/logo.png" 
+                alt="3Blex Logo" 
+                width={40} 
+                height={40} 
+                className="rounded-xl shadow-lg"
+              />
               <span className="text-xl font-bold">3Blex Network</span>
             </div>
             

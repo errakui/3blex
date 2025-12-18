@@ -128,9 +128,13 @@ export function Sidebar({ isOpen, onClose, user }: SidebarProps) {
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-slate-100">
             <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
-                <span className="text-white font-bold text-lg">3B</span>
-              </div>
+              <Image 
+                src="/assets/logo.png" 
+                alt="3Blex Logo" 
+                width={40} 
+                height={40} 
+                className="rounded-xl shadow-lg shadow-brand-500/20"
+              />
               {!collapsed && (
                 <div>
                   <p className="font-bold text-slate-900">3Blex</p>

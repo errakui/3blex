@@ -75,9 +75,15 @@ export default function OnboardingPage() {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', duration: 0.5 }}
-            className="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-brand-500 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-brand-500/30"
+            className="w-32 h-32 mx-auto mb-8"
           >
-            <span className="text-white text-5xl font-bold">3B</span>
+            <Image 
+              src="/assets/logo.png" 
+              alt="3Blex Logo" 
+              width={128} 
+              height={128} 
+              className="rounded-3xl shadow-2xl shadow-brand-500/30"
+            />
           </motion.div>
           <p className="text-slate-600 max-w-md mx-auto">
             Scopri come costruire il tuo business con il sistema binario più avanzato. 
