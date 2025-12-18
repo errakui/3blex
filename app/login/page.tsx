@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { Eye, EyeOff, Shield } from 'lucide-react'
-import { apiUrl } from '@/lib/api'
+import { apiUrl, apiPost } from '@/lib/api'
 
 export default function LoginPage() {
   const router = useRouter()
