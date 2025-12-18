@@ -8,118 +8,130 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id
 
-    // Get subscription status
+    // Get user data with new schema
     const userResult = await pool.query(
-      'SELECT subscription_status, subscription_plan FROM users WHERE id = $1',
+      `SELECT u.*, w.available_balance, w.pending_balance, w.total_earned
+       FROM users u
+       LEFT JOIN wallets w ON u.id = w.user_id
+       WHERE u.id = $1`,
       [userId]
     )
-    const subscriptionStatus = userResult.rows[0]?.subscription_status || 'inactive'
-
-    // Get KYC status
-    const kycResult = await pool.query(
-      `SELECT status FROM kyc_documents 
-       WHERE user_id = $1 
-       ORDER BY created_at DESC LIMIT 1`,
-      [userId]
-    )
-    const kycStatus = kycResult.rows[0]?.status === 'approved' ? 'verified' : 
-                     kycResult.rows[0]?.status || 'not_verified'
-
-    // Get recent orders
-    const ordersResult = await pool.query(
-      `SELECT o.id, o.order_number, o.total, o.status, o.created_at,
-              json_agg(json_build_object(
-                'id', oi.id,
-                'name', p.name,
-                'quantity', oi.quantity,
-                'price', oi.price
-              )) as items
-       FROM orders o
-       LEFT JOIN order_items oi ON o.id = oi.order_id
-       LEFT JOIN products p ON oi.product_id = p.id
-       WHERE o.user_id = $1
-       GROUP BY o.id, o.order_number, o.total, o.status, o.created_at
-       ORDER BY o.created_at DESC
-       LIMIT 5`,
-      [userId]
-    )
-
-    const recentOrders = ordersResult.rows.map(order => ({
-      id: order.id,
-      orderNumber: order.order_number,
-      total: parseFloat(order.total),
-      status: order.status,
-      date: order.created_at,
-      items: order.items.filter(item => item.id !== null),
-    }))
-
-    // Get network stats if user has network access
-    let networkStats = null
-    const hasNetworkAccess = req.user.role === 'network_member' || req.user.role === 'admin'
-
-    if (hasNetworkAccess) {
-      // Get referral link
-      const referralCode = userResult.rows[0]?.referral_code
-      const referralLink = referralCode 
-        ? `${process.env.FRONTEND_URL || 'http://localhost:3000'}/register?ref=${referralCode}`
-        : null
-
-      // Get total affiliates
-      const affiliatesResult = await pool.query(
-        'SELECT COUNT(*) as count FROM users WHERE referred_by = $1',
-        [userId]
-      )
-      const totalAffiliates = parseInt(affiliatesResult.rows[0].count) || 0
-
-      // Get commissions
-      const commissionsResult = await pool.query(
-        `SELECT 
-          SUM(CASE WHEN status = 'available' OR status = 'paid' THEN amount ELSE 0 END) as total,
-          SUM(CASE WHEN status = 'available' THEN amount ELSE 0 END) as available,
-          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pending
-         FROM commissions WHERE referrer_id = $1`,
-        [userId]
-      )
-
-      networkStats = {
-        totalAffiliates,
-        totalCommissions: parseFloat(commissionsResult.rows[0].total || 0),
-        availableCommissions: parseFloat(commissionsResult.rows[0].available || 0),
-        pendingCommissions: parseFloat(commissionsResult.rows[0].pending || 0),
-        referralLink,
-      }
+    
+    const user = userResult.rows[0]
+    if (!user) {
+      return res.status(404).json({ message: 'Utente non trovato' })
     }
 
-    // Get broadcast messages
-    const broadcastsResult = await pool.query(
-      `SELECT * FROM broadcast_messages
-       WHERE status = 'active'
-       AND (target_audience = 'all' OR target_audience = $1)
-       AND (expires_at IS NULL OR expires_at > NOW())
-       ORDER BY 
-         CASE priority
-           WHEN 'urgent' THEN 1
-           WHEN 'high' THEN 2
-           WHEN 'normal' THEN 3
-           WHEN 'low' THEN 4
-         END,
-         created_at DESC
+    // Get network stats from binary tree
+    const binaryResult = await pool.query(
+      `SELECT left_volume, right_volume, personal_volume
+       FROM binary_tree WHERE user_id = $1`,
+      [userId]
+    )
+    const binaryData = binaryResult.rows[0] || { left_volume: 0, right_volume: 0, personal_volume: 0 }
+
+    // Count direct sponsored
+    const directsResult = await pool.query(
+      `SELECT COUNT(*) as count FROM sponsor_tree WHERE sponsor_id = $1`,
+      [userId]
+    )
+    const directSponsored = parseInt(directsResult.rows[0]?.count) || 0
+
+    // Count total downline
+    const downlineResult = await pool.query(
+      `SELECT COUNT(*) as count FROM sponsor_tree_closure 
+       WHERE ancestor_id = $1 AND descendant_id != $1`,
+      [userId]
+    )
+    const totalDownline = parseInt(downlineResult.rows[0]?.count) || 0
+
+    // Get recent commissions
+    const commissionsResult = await pool.query(
+      `SELECT type, amount, status, created_at, description
+       FROM commissions 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC 
        LIMIT 5`,
-      [req.user.role || 'affiliate_basic']
+      [userId]
     )
 
+    // Calculate this month commissions
+    const monthCommResult = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) as total
+       FROM commissions 
+       WHERE user_id = $1 
+       AND created_at >= date_trunc('month', CURRENT_DATE)
+       AND status IN ('available', 'paid')`,
+      [userId]
+    )
+    const thisMonthCommissions = parseFloat(monthCommResult.rows[0]?.total) || 0
+
+    // Get last month for comparison
+    const lastMonthCommResult = await pool.query(
+      `SELECT COALESCE(SUM(amount), 0) as total
+       FROM commissions 
+       WHERE user_id = $1 
+       AND created_at >= date_trunc('month', CURRENT_DATE - interval '1 month')
+       AND created_at < date_trunc('month', CURRENT_DATE)
+       AND status IN ('available', 'paid')`,
+      [userId]
+    )
+    const lastMonthCommissions = parseFloat(lastMonthCommResult.rows[0]?.total) || 0
+
+    // Calculate trend
+    const trend = lastMonthCommissions > 0 
+      ? ((thisMonthCommissions - lastMonthCommissions) / lastMonthCommissions * 100).toFixed(1)
+      : 0
+
+    // Get notifications count
+    const notifResult = await pool.query(
+      `SELECT COUNT(*) as count FROM notifications 
+       WHERE user_id = $1 AND read = false`,
+      [userId]
+    )
+    const unreadNotifications = parseInt(notifResult.rows[0]?.count) || 0
+
+    // Build response matching frontend expectations
     res.json({
-      subscriptionStatus,
-      kycStatus,
-      recentOrders,
-      broadcasts: broadcastsResult.rows,
-      ...networkStats,
+      success: true,
+      data: {
+        wallet: {
+          available: parseFloat(user.available_balance) || 0,
+          pending: parseFloat(user.pending_balance) || 0,
+          earned: parseFloat(user.total_earned) || 0,
+        },
+        network: {
+          totalDownline,
+          activeDownline: totalDownline, // Simplified
+          leftVolume: parseFloat(binaryData.left_volume) || 0,
+          rightVolume: parseFloat(binaryData.right_volume) || 0,
+          directSponsored,
+        },
+        rank: {
+          current: user.current_rank || 'UNRANKED',
+          progress: 50, // TODO: Calculate actual progress
+          nextRank: getNextRank(user.current_rank),
+        },
+        commissions: {
+          thisMonth: thisMonthCommissions,
+          lastMonth: lastMonthCommissions,
+          trend: parseFloat(trend),
+        },
+        referralCode: user.referral_code,
+        notifications: unreadNotifications,
+        recentCommissions: commissionsResult.rows,
+      }
     })
   } catch (error) {
     console.error('Dashboard error:', error)
-    res.status(500).json({ message: 'Errore nel caricamento della dashboard' })
+    res.status(500).json({ success: false, message: 'Errore nel caricamento della dashboard' })
   }
 })
 
-module.exports = router
+function getNextRank(currentRank) {
+  const ranks = ['UNRANKED', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'DIAMOND']
+  const currentIndex = ranks.indexOf(currentRank || 'UNRANKED')
+  return currentIndex < ranks.length - 1 ? ranks[currentIndex + 1] : 'DIAMOND'
+}
 
+module.exports = router
