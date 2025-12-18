@@ -3,16 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node server.js",
+    "dev:next": "next dev",
     "build": "next build",
-    "start": "next start",
-    "start:custom": "node server.js",
-    "start:production": "NODE_ENV=production node server.js",
-    "lint": "next lint",
+    "start": "NODE_ENV=production node server.js",
     "server": "node server/index.js",
-    "db:apply-extended": "node server/db/applyExtendedSchema.js",
-    "verify": "node scripts/verify-setup.js",
-    "setup": "bash scripts/start-local.sh"
+    "lint": "next lint",
+    "db:init": "node scripts/init-database.js",
+    "db:schema": "psql $DATABASE_URL -f server/db/schema_3blex.sql",
+    "db:reset": "psql $DATABASE_URL -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;' && npm run db:init",
+    "verify": "node scripts/verify-setup.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.3",

@@ -1,19 +1,38 @@
-const { Pool } = require('pg')
-require('dotenv').config()
+/**
+ * Database Connection Pool
+ * Configurazione PostgreSQL per 3Blex Network
+ */
 
+const { Pool } = require('pg');
+require('dotenv').config();
+
+// Configurazione pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-})
+  ssl: process.env.NODE_ENV === 'production' ? {
+    rejectUnauthorized: false
+  } : false,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
 
-// Test connection
+// Log connessione
 pool.on('connect', () => {
-  console.log('✅ Database connected')
-})
+  console.log('📦 Database connected');
+});
 
 pool.on('error', (err) => {
-  console.error('❌ Database error:', err)
-})
+  console.error('❌ Unexpected database error:', err);
+});
 
-module.exports = pool
+// Test connessione all'avvio
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('❌ Database connection failed:', err.message);
+  } else {
+    console.log('✅ Database connection successful:', res.rows[0].now);
+  }
+});
 
+module.exports = pool;

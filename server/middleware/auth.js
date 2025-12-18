@@ -1,67 +1,169 @@
-const jwt = require('jsonwebtoken')
-const pool = require('../db/index')
+/**
+ * Authentication Middleware
+ * Gestisce autenticazione JWT e controllo ruoli
+ */
 
+const jwt = require('jsonwebtoken');
+const pool = require('../db/index');
+
+/**
+ * Middleware per autenticare il token JWT
+ */
 const authenticateToken = async (req, res, next) => {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
-    return res.status(401).json({ message: 'Token di autenticazione mancante' })
+    return res.status(401).json({ 
+      success: false,
+      message: 'Token di autenticazione mancante' 
+    });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // Get user from database
+    // Ottieni utente dal database
     const result = await pool.query(
-      'SELECT id, name, email, role, subscription_status, subscription_plan FROM users WHERE id = $1',
-      [decoded.userId]
-    )
+      `SELECT id, email, first_name, last_name, role, status, kyc_status, current_rank, referral_code
+       FROM users WHERE id = $1`,
+      [decoded.id]
+    );
 
     if (result.rows.length === 0) {
-      return res.status(401).json({ message: 'Utente non trovato' })
+      return res.status(401).json({ 
+        success: false,
+        message: 'Utente non trovato' 
+      });
     }
 
-    req.user = result.rows[0]
-    next()
-  } catch (error) {
-    return res.status(403).json({ message: 'Token non valido' })
-  }
-}
+    const user = result.rows[0];
+    
+    // Verifica che l'utente non sia sospeso
+    if (user.status === 'suspended') {
+      return res.status(403).json({ 
+        success: false,
+        message: 'Account sospeso. Contatta il supporto.' 
+      });
+    }
 
+    req.user = {
+      id: user.id,
+      email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
+      role: user.role,
+      status: user.status,
+      kycStatus: user.kyc_status,
+      currentRank: user.current_rank,
+      referralCode: user.referral_code
+    };
+    
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Token scaduto. Effettua nuovamente il login.' 
+      });
+    }
+    return res.status(403).json({ 
+      success: false,
+      message: 'Token non valido' 
+    });
+  }
+};
+
+/**
+ * Middleware per richiedere ruoli specifici
+ */
 const requireRole = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ message: 'Autenticazione richiesta' })
+      return res.status(401).json({ 
+        success: false,
+        message: 'Autenticazione richiesta' 
+      });
     }
 
     if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ message: 'Accesso negato' })
+      return res.status(403).json({ 
+        success: false,
+        message: 'Accesso negato. Ruolo non autorizzato.' 
+      });
     }
 
-    next()
-  }
-}
+    next();
+  };
+};
 
-const requireNetworkAccess = (req, res, next) => {
+/**
+ * Middleware per richiedere account attivo
+ */
+const requireActiveAccount = (req, res, next) => {
   if (!req.user) {
-    return res.status(401).json({ message: 'Autenticazione richiesta' })
+    return res.status(401).json({ 
+      success: false,
+      message: 'Autenticazione richiesta' 
+    });
   }
 
-  const hasAccess = req.user.role === 'network_member' || req.user.role === 'admin'
-
-  if (!hasAccess) {
+  if (req.user.status !== 'active') {
     return res.status(403).json({ 
-      message: 'Accesso Network richiesto. Attiva un abbonamento per continuare.' 
-    })
+      success: false,
+      message: 'Account non attivo. Acquista un pack di attivazione per continuare.' 
+    });
   }
 
-  next()
-}
+  next();
+};
+
+/**
+ * Middleware per richiedere KYC approvato
+ */
+const requireKYC = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ 
+      success: false,
+      message: 'Autenticazione richiesta' 
+    });
+  }
+
+  if (req.user.kycStatus !== 'approved') {
+    return res.status(403).json({ 
+      success: false,
+      message: 'KYC richiesto. Completa la verifica dell\'identità per continuare.' 
+    });
+  }
+
+  next();
+};
+
+/**
+ * Middleware per admin only
+ */
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ 
+      success: false,
+      message: 'Autenticazione richiesta' 
+    });
+  }
+
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ 
+      success: false,
+      message: 'Accesso negato. Solo amministratori.' 
+    });
+  }
+
+  next();
+};
 
 module.exports = {
   authenticateToken,
   requireRole,
-  requireNetworkAccess,
-}
-
+  requireActiveAccount,
+  requireKYC,
+  requireAdmin
+};
