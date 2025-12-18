@@ -1,198 +1,203 @@
-# 3Blex Network - Piattaforma di Network Marketing
+# 🚀 3Blex Network - Piattaforma MLM Binaria
 
-Software professionale web-based per Network Marketing (MLM) con gestione completa di affiliati, abbonamenti, commissioni e KYC.
+Sistema professionale di Network Marketing (MLM) con struttura binaria a due gambe, commissioni multilivello e gestione completa affiliati.
 
-## 🎯 Caratteristiche
+## 📋 Caratteristiche Principali
 
-- **Sistema di Autenticazione JWT** con gestione ruoli
-- **Dashboard Network** per utenti paganti
-- **Sistema Commissioni 20%** automatico
-- **Verifica KYC** con upload documenti
-- **E-commerce integrato** con catalogo e ordini
-- **Abbonamenti** mensili/annuali con Stripe
-- **Pannello Admin** completo
+### Sistema Binario Puro
+- **Albero a 2 gambe** (left/right) con spillover automatico
+- **Posizionamento BFS** per trovare il primo slot disponibile
+- **Auto-balance** sulla gamba più debole
+- **Sponsor Tree separato** dal Binary Tree
+
+### Sistema Commissioni
+| Tipo | Percentuale | Descrizione |
+|------|-------------|-------------|
+| **Diretta** | 20% | Sul primo ordine degli sponsorizzati diretti |
+| **Binaria** | 10% | Sulla gamba debole (settimanale) |
+| **Multilivello** | 5-0.25% | Fino a 10 livelli sullo Sponsor Tree |
+
+### Sistema Qualifiche
+| Rank | PV | Left Vol. | Right Vol. | Diretti Attivi | Bonus |
+|------|-----|-----------|-----------|----------------|-------|
+| Bronze | 100 | - | - | - | €0 |
+| Silver | 100 | 1,000 | 1,000 | 2 | €100 |
+| Gold | 200 | 5,000 | 5,000 | 4 | €500 |
+| Platinum | 500 | 25,000 | 25,000 | 6 | €2,000 |
+| Diamond | 1,000 | 100,000 | 100,000 | 10 | €10,000 |
 
 ## 🛠️ Stack Tecnologico
 
-### Frontend
-- Next.js 14
-- React 18
-- TailwindCSS
-- TypeScript
-- Lucide React (icone)
+- **Frontend**: Next.js 14, React 18, TailwindCSS, TypeScript
+- **Backend**: Node.js, Express, PostgreSQL
+- **Auth**: JWT
+- **Payments**: Stripe (opzionale)
 
-### Backend
-- Node.js
-- Express
-- PostgreSQL
-- JWT (autenticazione)
-- Stripe (pagamenti)
-- Multer (upload file)
+## 🚀 Quick Start
 
-## 📋 Prerequisiti
+### 1. Clona e installa
 
-- Node.js 18+
-- PostgreSQL 12+
-- Stripe Account (per i pagamenti)
-
-## 🚀 Installazione
-
-1. **Clona il repository**
 ```bash
-git clone <repository-url>
+git clone https://github.com/errakui/3blex.git
 cd 3blex
-```
-
-2. **Installa le dipendenze**
-```bash
 npm install
 ```
 
-3. **Configura il database**
+### 2. Configura l'ambiente
+
 ```bash
-# Crea il database PostgreSQL
+cp env.example .env
+# Modifica .env con le tue configurazioni
+```
+
+Variabili richieste:
+```env
+DATABASE_URL=postgresql://user:pass@localhost:5432/3blex_network
+JWT_SECRET=genera-una-stringa-sicura-32-caratteri
+PORT=8080
+```
+
+### 3. Inizializza il database
+
+```bash
+# Crea il database
 createdb 3blex_network
 
-# Esegui lo schema SQL
-psql -d 3blex_network -f server/db/schema.sql
+# Applica lo schema e crea admin
+npm run db:init
 ```
 
-4. **Configura le variabili d'ambiente**
+### 4. Avvia il server
+
 ```bash
-cp .env.example .env
-```
-
-Modifica `.env` con le tue configurazioni:
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/3blex_network
-JWT_SECRET=your-super-secret-jwt-key
-PORT=3001
-NEXT_PUBLIC_API_URL=http://localhost:3001
-STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
-STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
-FRONTEND_URL=http://localhost:3000
-```
-
-5. **Crea la directory uploads**
-```bash
-mkdir -p server/uploads
-```
-
-## 🏃 Avvio
-
-### Sviluppo
-
-**Terminale 1 - Frontend (Next.js)**
-```bash
+# Development
 npm run dev
-```
 
-**Terminale 2 - Backend (Express)**
-```bash
-npm run server
-```
-
-Il frontend sarà disponibile su `http://localhost:3000`
-Il backend sarà disponibile su `http://localhost:3001`
-
-### Produzione
-
-```bash
-npm run build
+# Production
 npm start
 ```
 
-## 📁 Struttura del Progetto
+L'app sarà disponibile su `http://localhost:8080`
+
+## 📚 API Endpoints
+
+### Autenticazione
+```
+POST /api/auth/register     - Registrazione
+POST /api/auth/login        - Login
+GET  /api/auth/me           - Profilo utente
+PUT  /api/auth/profile      - Aggiorna profilo
+```
+
+### Network
+```
+GET  /api/network/binary-tree     - Albero binario
+GET  /api/network/binary-stats    - Statistiche binarie
+GET  /api/network/sponsor-tree    - Sponsor tree
+GET  /api/network/directs         - Affiliati diretti
+GET  /api/network/upline          - Upline sponsor
+GET  /api/network/downline        - Downline completa
+POST /api/network/place           - Posiziona affiliato
+```
+
+### Commissioni
+```
+GET  /api/commissions             - Lista commissioni
+GET  /api/commissions/summary     - Riepilogo per tipo
+GET  /api/commissions/binary-history - Storico binario
+```
+
+### Wallet
+```
+GET  /api/wallet                  - Saldo e statistiche
+GET  /api/wallet/transactions     - Storico transazioni
+POST /api/wallet/withdraw         - Richiedi prelievo
+GET  /api/wallet/withdrawals      - Storico prelievi
+```
+
+### Qualifiche
+```
+GET  /api/qualifications/ranks       - Lista rank
+GET  /api/qualifications/my-progress - Progresso verso next rank
+GET  /api/qualifications/history     - Storico qualifiche
+GET  /api/qualifications/leaderboard - Classifica
+```
+
+## 📁 Struttura Progetto
 
 ```
 3blex/
-├── app/                    # Next.js App Router
-│   ├── dashboard/         # Dashboard principale
-│   ├── login/             # Pagina di login
-│   ├── register/          # Pagina di registrazione
-│   ├── network/           # Dashboard Network
-│   ├── kyc/               # Verifica KYC
-│   ├── subscription/      # Abbonamenti
-│   ├── products/          # Catalogo prodotti
-│   └── orders/            # Ordini utente
-├── components/            # Componenti React
-│   ├── ui/               # Componenti UI riutilizzabili
-│   └── layout/           # Componenti layout
-├── server/                # Backend Express
-│   ├── routes/           # Route API
-│   ├── middleware/       # Middleware (auth, etc.)
-│   ├── db/               # Database (schema, pool)
-│   └── uploads/          # File caricati (KYC)
-└── assets/               # Asset statici (logo, etc.)
+├── app/                    # Next.js App Router (Frontend)
+├── components/             # Componenti React
+├── server/
+│   ├── db/
+│   │   └── schema_3blex.sql   # Schema database completo
+│   ├── middleware/
+│   │   └── auth.js            # JWT authentication
+│   ├── routes/                # API routes
+│   │   ├── auth.js
+│   │   ├── network.js
+│   │   ├── commissions.js
+│   │   ├── wallet.js
+│   │   └── qualifications.js
+│   └── services/              # Business logic
+│       ├── BinaryTreeService.js
+│       ├── SponsorTreeService.js
+│       ├── CommissionService.js
+│       ├── WalletService.js
+│       ├── RankService.js
+│       └── UserService.js
+├── scripts/
+│   └── init-database.js    # Script inizializzazione DB
+├── server.js               # Entry point (Next.js + Express)
+└── 3blex.md                # Specifiche tecniche complete
 ```
 
-## 👥 Ruoli Utente
+## 🔧 Deploy su Koyeb
 
-### 1. Affiliate Basic
-- Registrazione gratuita
-- Accesso limitato
-- Può acquistare prodotti
-- NON può accedere al Network
+Vedi [DEPLOY_KOYEB.md](./DEPLOY_KOYEB.md) per la guida completa.
 
-### 2. Network Member
-- Utente pagante
-- Accesso completo al Network
-- Link di referral personale
-- Commissioni 20% su nuovi affiliati paganti
-- Dashboard Network completa
+Quick deploy:
+1. Crea database PostgreSQL su Koyeb
+2. Connetti il repo GitHub
+3. Configura variabili ambiente
+4. Deploy!
 
-### 3. Admin
-- Accesso completo al sistema
-- Gestione utenti, prodotti, ordini
-- Approvazione KYC
-- Gestione commissioni
+## 📖 Documentazione Tecnica
 
-## 💳 Sistema Commissioni
+Il file `3blex.md` contiene:
+- Specifiche complete del sistema binario
+- Algoritmi di placement e spillover
+- Logica commissioni dettagliata
+- Schema database completo
+- Flussi operativi
 
-- **20%** su ogni nuovo affiliato che acquista un abbonamento
-- Commissioni in stato **pending** fino all'approvazione KYC del referrer
-- Una volta verificato il KYC, le commissioni diventano **available**
-- L'admin può pagare le commissioni cambiandone lo stato a **paid**
+## 🆘 Troubleshooting
 
-## 🔐 Sistema KYC
+### Errore connessione DB
+```bash
+# Verifica che PostgreSQL sia attivo
+pg_isready -h localhost -p 5432
 
-1. L'utente carica i documenti (ID, passaporto, etc.)
-2. I documenti vengono salvati in `server/uploads`
-3. L'admin li rivede e approva/rifiuta
-4. Con KYC approvato, l'utente può prelevare commissioni
+# Verifica DATABASE_URL
+psql $DATABASE_URL -c "SELECT 1"
+```
 
-## 🎨 Design
+### Reset database
+```bash
+npm run db:reset
+```
 
-Il design utilizza la palette colori:
-- **Viola principale**: #9F08F9
-- **Viola scuro**: #623386
-- **Accento**: #C796E1
-- **Background**: #FBFAFC
-- **Bordo**: #E5E4E5
-
-## 📝 Note
-
-- Il logo si trova in `assets/logo.png`
-- Le variabili d'ambiente sono necessarie per il funzionamento
-- Stripe deve essere configurato per i pagamenti
-- PostgreSQL deve essere in esecuzione
-
-## 🔧 Troubleshooting
-
-**Errore connessione database**
-- Verifica che PostgreSQL sia in esecuzione
-- Controlla DATABASE_URL in `.env`
-
-**Errore upload file**
-- Verifica che `server/uploads` esista
-- Controlla i permessi della directory
-
-**Errore Stripe**
-- Verifica le chiavi API in `.env`
-- Controlla che il webhook sia configurato correttamente
+### Logs
+```bash
+# I log sono visibili nella console del server
+npm run dev
+```
 
 ## 📄 Licenza
 
-Proprietario - 3Blex Network
+Proprietario - 3Blex Network © 2024
 
+---
+
+Made with ❤️ for the MLM community
