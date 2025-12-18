@@ -6,6 +6,7 @@ interface DonutData {
   name: string
   value: number
   color: string
+  [key: string]: string | number
 }
 
 interface DonutChartProps {
