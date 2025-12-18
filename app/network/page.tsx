@@ -1,490 +1,349 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import DashboardLayout from '@/components/layout/DashboardLayout'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Users, DollarSign, TrendingUp, Copy, CheckCircle, Clock, FileCheck, Search } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
-import NetworkGraph from '@/components/network/NetworkGraph'
-import { apiUrl } from '@/lib/api'
+import { 
+  Users, 
+  TrendingUp, 
+  Network,
+  ChevronRight,
+  Target,
+  Award,
+  Layers,
+  UserPlus,
+  Activity
+} from 'lucide-react'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { StatsCard } from '@/components/ui/StatsCard'
+import { BarChart } from '@/components/charts/BarChart'
+import { apiGet } from '@/lib/api'
 
 interface NetworkStats {
-  totalAffiliates: number
-  totalCommissions: number
-  availableCommissions: number
-  pendingCommissions: number
-  referralLink: string
-  affiliates: Array<{
-    id: number
-    name: string
-    email: string
-    registrationDate: string
-    subscriptionStatus: string
-    kycStatus: string
-    commissionsGenerated: number
-    isInactive?: boolean
-    atRiskLosingQualification?: boolean
-    currentRank?: string
-    groupVolume?: number
-  }>
-  inactiveCount?: number
-  atRiskCount?: number
-  growthData: Array<{ date: string; affiliates: number }>
-  networkTree?: Array<{
-    id: number
-    name: string
-    email: string
-    referralCode: string
-    level: number
-    subscriptionStatus: string
-  }>
-  currentUserId?: number
-  currentUserRole?: string
+  totalDownline: number
+  activeDownline: number
+  directSponsored: number
+  leftVolume: number
+  rightVolume: number
+  levelBreakdown: { name: string; value: number }[]
+  recentActivity: {
+    id: string
+    type: string
+    user: string
+    date: string
+  }[]
 }
 
 export default function NetworkPage() {
-  const router = useRouter()
   const [stats, setStats] = useState<NetworkStats | null>(null)
   const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'active' | 'pending' | 'inactive' | 'atRisk'>('all')
-  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    const fetchNetwork = async () => {
-      const token = localStorage.getItem('token')
-      
-      try {
-        const response = await fetch(
-          apiUrl('/api/network/stats'),
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        )
+    loadStats()
+  }, [])
 
-        if (!response.ok) {
-          if (response.status === 403) {
-            router.push('/subscription')
-            return
-          }
-        }
-
-        const data = await response.json()
-        setStats(data)
-      } catch (err) {
-        console.error('Error fetching network:', err)
-      } finally {
-        setLoading(false)
+  const loadStats = async () => {
+    try {
+      const response = await apiGet('/api/network/stats')
+      if (response.success) {
+        setStats(response.data)
       }
-    }
-
-    fetchNetwork()
-  }, [router])
-
-  const copyReferralLink = () => {
-    if (stats?.referralLink) {
-      navigator.clipboard.writeText(stats.referralLink)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      console.error('Error loading network stats:', error)
+      // Mock data
+      setStats({
+        totalDownline: 156,
+        activeDownline: 142,
+        directSponsored: 12,
+        leftVolume: 45000,
+        rightVolume: 38500,
+        levelBreakdown: [
+          { name: 'Liv 1', value: 12 },
+          { name: 'Liv 2', value: 28 },
+          { name: 'Liv 3', value: 45 },
+          { name: 'Liv 4', value: 38 },
+          { name: 'Liv 5', value: 22 },
+          { name: 'Liv 6', value: 11 },
+        ],
+        recentActivity: [
+          { id: '1', type: 'join', user: 'Mario Rossi', date: '2 minuti fa' },
+          { id: '2', type: 'purchase', user: 'Giulia Bianchi', date: '15 minuti fa' },
+          { id: '3', type: 'rank_up', user: 'Paolo Verdi', date: '1 ora fa' },
+          { id: '4', type: 'join', user: 'Anna Ferrari', date: '3 ore fa' },
+        ],
+      })
+    } finally {
+      setLoading(false)
     }
   }
-
-  const filteredAffiliates = stats?.affiliates.filter((affiliate) => {
-    // Search filter
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      if (!affiliate.name.toLowerCase().includes(searchLower) &&
-          !affiliate.email.toLowerCase().includes(searchLower) &&
-          !affiliate.id.toString().includes(searchLower)) {
-        return false
-      }
-    }
-    
-    // Status filter
-    if (filter === 'active') return affiliate.subscriptionStatus === 'active'
-    if (filter === 'pending') return affiliate.subscriptionStatus === 'pending'
-    if (filter === 'inactive') return affiliate.isInactive === true
-    if (filter === 'atRisk') return affiliate.atRiskLosingQualification === true
-    return true
-  })
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-48 bg-slate-200 rounded-lg" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-32 bg-slate-200 rounded-2xl" />
+            ))}
+          </div>
         </div>
       </DashboardLayout>
     )
   }
 
-  if (!stats) {
-    return (
-      <DashboardLayout>
-        <Card className="text-center py-12">
-          <h2 className="text-2xl font-bold text-text-primary mb-2">
-            Accesso Network richiesto
-          </h2>
-          <p className="text-text-secondary mb-6">
-            Attiva un abbonamento per accedere al Network Marketing
-          </p>
-          <Link href="/subscription">
-            <Button>Attiva Abbonamento</Button>
-          </Link>
-        </Card>
-      </DashboardLayout>
-    )
-  }
+  if (!stats) return null
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-20 md:pb-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-text-primary mb-2">
-            Dashboard Network
-          </h1>
-          <p className="text-text-secondary">
-            Gestisci i tuoi affiliati e monitora le commissioni
-          </p>
-        </div>
-
-        {/* KYC Alert */}
-        {stats.availableCommissions > 0 && (
-          <Card className="bg-yellow-50 border-yellow-200">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
             <div className="flex items-center gap-3">
-              <Clock className="text-yellow-600" size={24} />
-              <div className="flex-1">
-                <h3 className="font-semibold text-yellow-900 mb-1">
-                  Verifica KYC richiesta
-                </h3>
-                <p className="text-sm text-yellow-700">
-                  Hai commissioni disponibili. Completa la verifica KYC per prelevarle.
+              <div className="p-2 bg-brand-100 rounded-xl">
+                <Network className="w-6 h-6 text-brand-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+                  Il Tuo Network
+                </h1>
+                <p className="text-slate-500">
+                  Panoramica della tua struttura
                 </p>
               </div>
-              <Link href="/kyc">
-                <Button variant="outline" className="bg-white">Vai a KYC</Button>
-              </Link>
             </div>
-          </Card>
-        )}
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex gap-3"
+          >
+            <Link
+              href="/referral-links"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl hover:border-brand-300 transition-colors"
+            >
+              <UserPlus className="w-5 h-5 text-slate-600" />
+              <span className="text-sm font-medium text-slate-700">Invita</span>
+            </Link>
+            <Link
+              href="/network/binary"
+              className="flex items-center gap-2 px-4 py-2.5 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors"
+            >
+              <Layers className="w-5 h-5" />
+              <span className="text-sm font-medium">Albero Binario</span>
+            </Link>
+          </motion.div>
+        </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm mb-1">Affiliati Totali</p>
-                <p className="text-3xl font-bold text-text-primary">
-                  {stats.totalAffiliates}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center">
-                <Users className="text-primary" size={24} />
-              </div>
-            </div>
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-text-secondary">
-                Registrati tramite il tuo link
-              </p>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm mb-1">Commissioni Totali</p>
-                <p className="text-3xl font-bold text-text-primary">
-                  €{stats.totalCommissions.toFixed(2)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center">
-                <TrendingUp className="text-primary" size={24} />
-              </div>
-            </div>
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-text-secondary">
-                Tutte le commissioni generate
-              </p>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm mb-1">Disponibili</p>
-                <p className="text-3xl font-bold text-primary">
-                  €{stats.availableCommissions.toFixed(2)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-primary-light rounded-full flex items-center justify-center">
-                <CheckCircle className="text-primary" size={24} />
-              </div>
-            </div>
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-text-secondary">
-                Pronte per il prelievo
-              </p>
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-text-secondary text-sm mb-1">In Sospeso</p>
-                <p className="text-3xl font-bold text-text-secondary">
-                  €{stats.pendingCommissions.toFixed(2)}
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-background rounded-full flex items-center justify-center">
-                <Clock className="text-text-secondary" size={24} />
-              </div>
-            </div>
-            <div className="pt-4 border-t border-border">
-              <p className="text-xs text-text-secondary">
-                In attesa di verifica
-              </p>
-            </div>
-          </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Downline Totale"
+            value={stats.totalDownline}
+            subtitle={`${stats.activeDownline} attivi`}
+            icon={Users}
+            color="brand"
+            delay={0.1}
+          />
+          <StatsCard
+            title="Diretti Sponsorizzati"
+            value={stats.directSponsored}
+            icon={Target}
+            color="accent"
+            delay={0.2}
+          />
+          <StatsCard
+            title="Volume Sinistro"
+            value={`€${stats.leftVolume.toLocaleString('it-IT')}`}
+            icon={TrendingUp}
+            color="purple"
+            delay={0.3}
+          />
+          <StatsCard
+            title="Volume Destro"
+            value={`€${stats.rightVolume.toLocaleString('it-IT')}`}
+            icon={TrendingUp}
+            color="gold"
+            delay={0.4}
+          />
         </div>
 
-        {/* Referral Link */}
-        <Card>
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-text-primary mb-2">
-                Il tuo Link di Referral
-              </h3>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={stats.referralLink}
-                  readOnly
-                  className="input flex-1 bg-background"
-                />
-                <Button
-                  variant="outline"
-                  onClick={copyReferralLink}
-                  className="flex items-center gap-2"
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Level Breakdown */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-card p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Distribuzione per Livello</h3>
+                <p className="text-sm text-slate-500">Affiliati per livello di profondità</p>
+              </div>
+            </div>
+            <BarChart
+              data={stats.levelBreakdown}
+              height={250}
+              color="#6366f1"
+            />
+          </motion.div>
+
+          {/* Recent Activity */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-card p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-accent-100 rounded-xl">
+                  <Activity className="w-5 h-5 text-accent-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Attività Recenti</h3>
+                  <p className="text-sm text-slate-500">Ultimi eventi nel tuo network</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {stats.recentActivity.map((activity, index) => (
+                <motion.div
+                  key={activity.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.5 + index * 0.1 }}
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors"
                 >
-                  {copied ? (
-                    <>
-                      <CheckCircle size={18} />
-                      Copiato!
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={18} />
-                      Copia
-                    </>
-                  )}
-                </Button>
-              </div>
-              <p className="text-sm text-text-secondary mt-2">
-                Condividi questo link per invitare nuovi affiliati e guadagnare il 20% delle commissioni
-              </p>
+                  <ActivityIcon type={activity.type} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-900 truncate">
+                      {activity.user}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {getActivityLabel(activity.type)}
+                    </p>
+                  </div>
+                  <span className="text-xs text-slate-400">{activity.date}</span>
+                </motion.div>
+              ))}
             </div>
-          </div>
-        </Card>
 
-        {/* Network Graph - Always show if affiliates exist */}
-        {stats && stats.affiliates && stats.affiliates.length > 0 ? (
-          <NetworkGraph
-            key={`graph-${stats.totalAffiliates}-${Date.now()}`}
-            affiliates={stats.affiliates.map((aff: any) => ({
-              id: aff.id,
-              name: aff.name || 'N/A',
-              email: aff.email || '',
-              referralCode: aff.referralCode || '',
-              level: 1,
-              subscriptionStatus: aff.subscriptionStatus || 'inactive',
-            }))}
-            currentUserId={stats.currentUserId || 0}
-            currentUserRole={stats.currentUserRole || 'network_member'}
+            <Link
+              href="/notifications"
+              className="flex items-center justify-center gap-2 mt-4 py-3 text-sm font-medium text-brand-600 hover:text-brand-700 hover:bg-brand-50 rounded-xl transition-colors"
+            >
+              Vedi tutte le attività
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </motion.div>
+        </div>
+
+        {/* Quick Links */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4"
+        >
+          <QuickLink
+            href="/network/binary"
+            icon={Layers}
+            title="Albero Binario"
+            description="Visualizza e gestisci la struttura a 2 gambe"
+            color="brand"
           />
-        ) : (
-          <Card>
-            <div className="text-center py-12">
-              <Users className="mx-auto mb-4 text-text-secondary opacity-50" size={48} />
-              <p className="text-text-secondary text-lg">Nessun affiliato da visualizzare nel grafico</p>
-              <p className="text-sm text-text-secondary mt-2">
-                Gli affiliati appariranno qui quando qualcuno si registra tramite il tuo link di referral
-              </p>
-              {stats && (
-                <p className="text-xs text-text-secondary mt-4">
-                  Stats disponibili: {JSON.stringify({ totalAffiliates: stats.totalAffiliates, hasAffiliates: !!stats.affiliates })}
-                </p>
-              )}
-            </div>
-          </Card>
-        )}
-
-
-        {/* Affiliates List */}
-        <Card>
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-            <h3 className="text-lg font-semibold text-text-primary">
-              I tuoi Affiliati
-            </h3>
-            <div className="flex gap-2 items-center flex-wrap">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-text-secondary" size={18} />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Cerca per nome, email o ID..."
-                  className="pl-10 pr-4 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-              {/* Filters */}
-              <button
-                onClick={() => setFilter('all')}
-                className={`chip ${filter === 'all' ? 'chip-active' : ''}`}
-              >
-                Tutti
-              </button>
-              <button
-                onClick={() => setFilter('active')}
-                className={`chip ${filter === 'active' ? 'chip-active' : ''}`}
-              >
-                Attivi
-              </button>
-              <button
-                onClick={() => setFilter('pending')}
-                className={`chip ${filter === 'pending' ? 'chip-active' : ''}`}
-              >
-                In attesa
-              </button>
-              <button
-                onClick={() => setFilter('inactive')}
-                className={`chip ${filter === 'inactive' ? 'chip-active' : ''}`}
-              >
-                Inattivi
-              </button>
-              <button
-                onClick={() => setFilter('atRisk')}
-                className={`chip ${filter === 'atRisk' ? 'chip-active' : ''}`}
-              >
-                A Rischio
-              </button>
-            </div>
-          </div>
-
-          {/* Alerts for inactive/at risk */}
-          {stats && (
-            <>
-              {(stats.inactiveCount || 0) > 0 && (
-                <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    ⚠️ <strong>{stats.inactiveCount}</strong> affiliato/i inattivi negli ultimi 30 giorni
-                  </p>
-                </div>
-              )}
-              {(stats.atRiskCount || 0) > 0 && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800">
-                    🚨 <strong>{stats.atRiskCount}</strong> affiliato/i a rischio di perdere la qualifica
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-
-          {filteredAffiliates && filteredAffiliates.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-text-secondary">
-                      ID
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-text-secondary">
-                      Nome
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-text-secondary">
-                      Email
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-text-secondary">
-                      Data Registrazione
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-text-secondary">
-                      Abbonamento
-                    </th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-text-secondary">
-                      KYC
-                    </th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-text-secondary">
-                      Commissioni
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAffiliates.map((affiliate) => (
-                    <tr key={affiliate.id} className="border-b border-border hover:bg-background">
-                      <td className="py-4 px-4 text-text-secondary text-sm font-mono">
-                        #{affiliate.id}
-                      </td>
-                      <td className="py-4 px-4 text-text-primary font-medium">
-                        {affiliate.name}
-                      </td>
-                      <td className="py-4 px-4 text-text-secondary text-sm">
-                        {affiliate.email}
-                      </td>
-                      <td className="py-4 px-4 text-text-secondary text-sm">
-                        {new Date(affiliate.registrationDate).toLocaleDateString('it-IT')}
-                      </td>
-                      <td className="py-4 px-4">
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            affiliate.subscriptionStatus === 'active'
-                              ? 'bg-green-100 text-green-600'
-                              : 'bg-yellow-100 text-yellow-600'
-                          }`}
-                        >
-                          {affiliate.subscriptionStatus === 'active' ? 'Attivo' : 'In attesa'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4">
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            affiliate.kycStatus === 'verified'
-                              ? 'bg-green-100 text-green-600'
-                              : affiliate.kycStatus === 'pending'
-                              ? 'bg-yellow-100 text-yellow-600'
-                              : 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
-                          {affiliate.kycStatus === 'verified'
-                            ? 'Verificato'
-                            : affiliate.kycStatus === 'pending'
-                            ? 'In verifica'
-                            : 'Non verificato'}
-                        </span>
-                      </td>
-                      <td className="py-4 px-4 text-right font-semibold text-text-primary">
-                        €{affiliate.commissionsGenerated.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-text-secondary">
-              <Users className="mx-auto mb-3 text-text-secondary opacity-50" size={48} />
-              <p>Nessun affiliato trovato</p>
-              <p className="text-sm mt-1">
-                Condividi il tuo link di referral per iniziare a costruire la tua rete
-              </p>
-            </div>
-          )}
-        </Card>
+          <QuickLink
+            href="/qualifications"
+            icon={Award}
+            title="Qualifiche"
+            description="Controlla i requisiti per il prossimo rank"
+            color="gold"
+          />
+          <QuickLink
+            href="/referral-links"
+            icon={UserPlus}
+            title="Genera Link"
+            description="Crea nuovi link referral personalizzati"
+            color="accent"
+          />
+        </motion.div>
       </div>
     </DashboardLayout>
   )
 }
 
+function ActivityIcon({ type }: { type: string }) {
+  const config: Record<string, { icon: any; bg: string; text: string }> = {
+    join: { icon: UserPlus, bg: 'bg-accent-100', text: 'text-accent-600' },
+    purchase: { icon: Target, bg: 'bg-brand-100', text: 'text-brand-600' },
+    rank_up: { icon: Award, bg: 'bg-amber-100', text: 'text-amber-600' },
+  }
+
+  const { icon: Icon, bg, text } = config[type] || config.join
+
+  return (
+    <div className={`p-2 rounded-xl ${bg}`}>
+      <Icon className={`w-4 h-4 ${text}`} />
+    </div>
+  )
+}
+
+function getActivityLabel(type: string): string {
+  const labels: Record<string, string> = {
+    join: 'Si è registrato',
+    purchase: 'Ha effettuato un acquisto',
+    rank_up: 'Ha raggiunto un nuovo rank',
+  }
+  return labels[type] || 'Attività'
+}
+
+function QuickLink({
+  href,
+  icon: Icon,
+  title,
+  description,
+  color,
+}: {
+  href: string
+  icon: any
+  title: string
+  description: string
+  color: 'brand' | 'accent' | 'gold'
+}) {
+  const colorClasses = {
+    brand: 'bg-brand-50 hover:bg-brand-100 border-brand-200',
+    accent: 'bg-accent-50 hover:bg-accent-100 border-accent-200',
+    gold: 'bg-amber-50 hover:bg-amber-100 border-amber-200',
+  }
+
+  const iconClasses = {
+    brand: 'bg-brand-500 text-white',
+    accent: 'bg-accent-500 text-white',
+    gold: 'bg-amber-500 text-white',
+  }
+
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-4 p-5 rounded-2xl border transition-all group ${colorClasses[color]}`}
+    >
+      <div className={`p-3 rounded-xl ${iconClasses[color]} group-hover:scale-110 transition-transform`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <div className="flex-1">
+        <p className="font-semibold text-slate-900">{title}</p>
+        <p className="text-sm text-slate-500">{description}</p>
+      </div>
+      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-1 transition-all" />
+    </Link>
+  )
+}

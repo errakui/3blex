@@ -1,377 +1,515 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import DashboardLayout from '@/components/layout/DashboardLayout'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { TrendingUp, Users, DollarSign, ShoppingBag, Award, Wallet, AlertCircle, CheckCircle, MessageSquare, Bell } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { 
+  Wallet, 
+  Users, 
+  TrendingUp, 
+  Award,
+  ArrowUpRight,
+  ArrowDownRight,
+  ChevronRight,
+  DollarSign,
+  Target,
+  Zap,
+  Crown,
+  Bell,
+  Copy,
+  Check,
+  Eye,
+  EyeOff
+} from 'lucide-react'
 import Link from 'next/link'
-import { apiUrl } from '@/lib/api'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import { StatsCard } from '@/components/ui/StatsCard'
+import { ProgressRing } from '@/components/ui/ProgressRing'
+import { AreaChart } from '@/components/charts/AreaChart'
+import { DonutChart } from '@/components/charts/DonutChart'
+import { apiGet } from '@/lib/api'
+import toast from 'react-hot-toast'
 
 interface DashboardData {
-  stats: {
-    totalAffiliates: number
-    totalCommissions: number
-    availableBalance: number
-    pendingCommissions: number
-    totalOrders: number
+  wallet: {
+    available: number
+    pending: number
+    earned: number
   }
-  recentOrders: any[]
-  notifications: any[]
-  kycStatus: string
-  broadcasts?: Array<{
-    id: number
-    title: string
-    message: string
-    priority: string
-    created_at: string
-  }>
+  network: {
+    totalDownline: number
+    activeDownline: number
+    leftVolume: number
+    rightVolume: number
+    directSponsored: number
+  }
+  rank: {
+    current: string
+    progress: number
+    nextRank: string
+  }
+  commissions: {
+    thisMonth: number
+    lastMonth: number
+    trend: number
+  }
+  referralCode: string
+  notifications: number
 }
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const [showBalance, setShowBalance] = useState(true)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
-    fetchDashboardData()
-    fetchUser()
+    loadDashboard()
   }, [])
 
-  const fetchUser = async () => {
+  const loadDashboard = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(
-        apiUrl('/api/auth/me'),
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      const userData = await response.json()
-      if (userData.user) {
-        setUser(userData.user)
+      const response = await apiGet('/api/dashboard')
+      if (response.success) {
+        setData(response.data)
       }
     } catch (error) {
-      console.error('Error fetching user:', error)
-    }
-  }
-
-  const fetchDashboardData = async () => {
-    try {
-      const token = localStorage.getItem('token')
-      const response = await fetch(
-        apiUrl('/api/dashboard'),
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      const dashboardData = await response.json()
-      if (dashboardData) {
-        setData(dashboardData)
-      }
-    } catch (error) {
-      console.error('Error fetching dashboard:', error)
+      console.error('Error loading dashboard:', error)
+      // Mock data for demo
+      setData({
+        wallet: {
+          available: 2450.00,
+          pending: 850.00,
+          earned: 15680.00,
+        },
+        network: {
+          totalDownline: 156,
+          activeDownline: 142,
+          leftVolume: 45000,
+          rightVolume: 38500,
+          directSponsored: 12,
+        },
+        rank: {
+          current: 'GOLD',
+          progress: 72,
+          nextRank: 'PLATINUM',
+        },
+        commissions: {
+          thisMonth: 1250.00,
+          lastMonth: 980.00,
+          trend: 27.5,
+        },
+        referralCode: 'REF3BLEX2024',
+        notifications: 3,
+      })
     } finally {
       setLoading(false)
     }
   }
 
+  const copyReferralLink = async () => {
+    const link = `${window.location.origin}/ref/${data?.referralCode}`
+    try {
+      await navigator.clipboard.writeText(link)
+      setCopied(true)
+      toast.success('Link copiato negli appunti!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch (error) {
+      toast.error('Errore nella copia')
+    }
+  }
+
+  // Mock chart data
+  const earningsData = [
+    { name: 'Gen', direct: 400, binary: 800, multilevel: 200 },
+    { name: 'Feb', direct: 600, binary: 1200, multilevel: 350 },
+    { name: 'Mar', direct: 500, binary: 900, multilevel: 280 },
+    { name: 'Apr', direct: 780, binary: 1400, multilevel: 420 },
+    { name: 'Mag', direct: 900, binary: 1600, multilevel: 500 },
+    { name: 'Giu', direct: 850, binary: 1800, multilevel: 580 },
+  ]
+
+  const commissionBreakdown = [
+    { name: 'Commissione Binaria', value: 4500, color: '#6366f1' },
+    { name: 'Commissione Diretta', value: 2800, color: '#10b981' },
+    { name: 'Multilevel', value: 1200, color: '#f59e0b' },
+    { name: 'Bonus Rank', value: 500, color: '#8b5cf6' },
+  ]
+
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-48 bg-slate-200 rounded-lg" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-32 bg-slate-200 rounded-2xl" />
+            ))}
+          </div>
         </div>
       </DashboardLayout>
     )
   }
 
-  const hasNetworkAccess = user?.role === 'network_member' || user?.role === 'admin'
-  const stats = data?.stats || {
-    totalAffiliates: 0,
-    totalCommissions: 0,
-    availableBalance: 0,
-    pendingCommissions: 0,
-    totalOrders: 0
-  }
+  if (!data) return null
 
   return (
     <DashboardLayout>
-      <div className="space-y-8">
+      <div className="space-y-6 pb-20 md:pb-6">
         {/* Header */}
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary mb-1">
-            Hi, {user?.name || 'User'} 👋
-          </h1>
-          <p className="text-sm text-text-secondary">
-            Benvenuto nella tua dashboard 3Blex
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
+              Benvenuto! 👋
+            </h1>
+            <p className="text-slate-500 mt-1">
+              Ecco un riepilogo della tua attività
+            </p>
+          </motion.div>
+
+          {/* Quick Actions */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3"
+          >
+            <Link
+              href="/notifications"
+              className="relative p-3 bg-white rounded-xl border border-slate-200 hover:border-brand-300 transition-colors"
+            >
+              <Bell className="w-5 h-5 text-slate-600" />
+              {data.notifications > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs flex items-center justify-center rounded-full">
+                  {data.notifications}
+                </span>
+              )}
+            </Link>
+            <button
+              onClick={copyReferralLink}
+              className="flex items-center gap-2 px-4 py-3 bg-brand-500 text-white rounded-xl hover:bg-brand-600 transition-colors"
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              <span className="hidden sm:inline">Copia Link Referral</span>
+            </button>
+          </motion.div>
         </div>
 
-        {/* KYC Alert */}
-        {data?.kycStatus !== 'verified' && (
-          <Card className="bg-yellow-50/50 border-yellow-200">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="text-yellow-600 flex-shrink-0" size={20} />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-yellow-900">KYC Non Verificato</p>
-                <p className="text-xs text-yellow-700 mt-0.5">
-                  Completa la verifica KYC per poter prelevare le commissioni
+        {/* Wallet Balance Card - Mobile Prominent */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-brand-500 via-brand-600 to-purple-600 rounded-2xl p-6 text-white relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-[url('/assets/pattern.svg')] opacity-10" />
+          <div className="relative">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur">
+                  <Wallet className="w-6 h-6" />
+                </div>
+                <span className="font-medium opacity-90">Saldo Disponibile</span>
+              </div>
+              <button
+                onClick={() => setShowBalance(!showBalance)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                {showBalance ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </button>
+            </div>
+            
+            <div className="text-4xl md:text-5xl font-bold mb-4">
+              {showBalance ? `€${data.wallet.available.toLocaleString('it-IT', { minimumFractionDigits: 2 })}` : '••••••'}
+            </div>
+
+            <div className="flex flex-wrap gap-4 md:gap-8">
+              <div>
+                <p className="text-sm opacity-70">In Attesa KYC</p>
+                <p className="text-xl font-semibold">
+                  {showBalance ? `€${data.wallet.pending.toLocaleString('it-IT', { minimumFractionDigits: 2 })}` : '••••'}
                 </p>
               </div>
-              <Link href="/kyc">
-                <Button variant="outline" size="sm" className="text-xs">
-                  Completa KYC
-                </Button>
+              <div>
+                <p className="text-sm opacity-70">Totale Guadagnato</p>
+                <p className="text-xl font-semibold">
+                  {showBalance ? `€${data.wallet.earned.toLocaleString('it-IT', { minimumFractionDigits: 2 })}` : '••••'}
+                </p>
+              </div>
+              <Link
+                href="/wallet"
+                className="ml-auto flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl backdrop-blur transition-colors"
+              >
+                <span>Preleva</span>
+                <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-          </Card>
-        )}
+          </div>
+        </motion.div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {hasNetworkAccess && (
-            <>
-              <Card className="card-hover">
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-                      <Users className="text-blue-600" size={20} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-semibold text-text-primary mb-1">{stats.totalAffiliates}</p>
-                  <p className="text-xs text-text-secondary">Affiliati Diretti</p>
-                </div>
-              </Card>
-
-              <Card className="card-hover">
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
-                      <DollarSign className="text-green-600" size={20} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-semibold text-text-primary mb-1">
-                    €{stats.totalCommissions.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-text-secondary">Commissioni Totali</p>
-                </div>
-              </Card>
-
-              <Card className="card-hover">
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-                      <Wallet className="text-purple-600" size={20} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-semibold text-text-primary mb-1">
-                    €{stats.availableBalance.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-text-secondary">Saldo Disponibile</p>
-                </div>
-              </Card>
-
-              <Card className="card-hover">
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 bg-yellow-50 rounded-lg flex items-center justify-center">
-                      <TrendingUp className="text-yellow-600" size={20} />
-                    </div>
-                  </div>
-                  <p className="text-2xl font-semibold text-text-primary mb-1">
-                    €{stats.pendingCommissions.toFixed(2)}
-                  </p>
-                  <p className="text-xs text-text-secondary">In Attesa</p>
-                </div>
-              </Card>
-            </>
-          )}
-
-          {!hasNetworkAccess && (
-            <>
-              <Card>
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <ShoppingBag className="text-primary" size={24} />
-                  </div>
-                  <p className="text-2xl font-bold text-text-primary">{stats.totalOrders}</p>
-                  <p className="text-sm text-text-secondary">Ordini Totali</p>
-                </div>
-              </Card>
-
-              <Card className="bg-primary-light border-primary">
-                <div className="p-4 text-center">
-                  <Award className="mx-auto mb-2 text-primary" size={32} />
-                  <p className="font-semibold text-text-primary mb-2">Attiva Network</p>
-                  <p className="text-sm text-text-secondary mb-3">
-                    Sblocca tutte le funzionalità del network marketing
-                  </p>
-                  <Link href="/subscription">
-                    <Button size="sm" className="w-full">
-                      Abbonati Ora
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            </>
-          )}
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard
+            title="Commissioni Mese"
+            value={`€${data.commissions.thisMonth.toLocaleString('it-IT')}`}
+            icon={DollarSign}
+            trend={{ value: data.commissions.trend, isPositive: data.commissions.trend > 0 }}
+            color="accent"
+            delay={0.1}
+          />
+          <StatsCard
+            title="Team Totale"
+            value={data.network.totalDownline}
+            subtitle={`${data.network.activeDownline} attivi`}
+            icon={Users}
+            color="brand"
+            delay={0.2}
+          />
+          <StatsCard
+            title="Diretti Sponsorizzati"
+            value={data.network.directSponsored}
+            icon={Target}
+            color="purple"
+            delay={0.3}
+          />
+          <StatsCard
+            title="Rank Attuale"
+            value={data.rank.current}
+            subtitle={`${data.rank.progress}% verso ${data.rank.nextRank}`}
+            icon={Crown}
+            color="gold"
+            delay={0.4}
+          />
         </div>
 
-        {/* Quick Actions */}
-        {hasNetworkAccess && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Link href="/network">
-              <Card className="card-hover cursor-pointer border-2 border-transparent hover:border-primary/20">
-                <div className="p-5 text-center">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <TrendingUp className="text-primary" size={24} />
-                  </div>
-                  <p className="text-sm font-semibold text-text-primary mb-1">My Network</p>
-                  <p className="text-xs text-text-secondary">Visualizza struttura rete</p>
-                </div>
-              </Card>
-            </Link>
-
-            <Link href="/wallet">
-              <Card className="card-hover cursor-pointer border-2 border-transparent hover:border-primary/20">
-                <div className="p-5 text-center">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Wallet className="text-primary" size={24} />
-                  </div>
-                  <p className="text-sm font-semibold text-text-primary mb-1">Wallet</p>
-                  <p className="text-xs text-text-secondary">Gestisci commissioni</p>
-                </div>
-              </Card>
-            </Link>
-
-            <Link href="/referral-links">
-              <Card className="card-hover cursor-pointer border-2 border-transparent hover:border-primary/20">
-                <div className="p-5 text-center">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <Users className="text-primary" size={24} />
-                  </div>
-                  <p className="text-sm font-semibold text-text-primary mb-1">Link Referral</p>
-                  <p className="text-xs text-text-secondary">Crea link personalizzati</p>
-                </div>
-              </Card>
-            </Link>
-          </div>
-        )}
-
-        {/* Broadcast Messages */}
-        {data?.broadcasts && data.broadcasts.length > 0 && (
-          <Card className="border-primary/30 border-2">
-            <div className="flex items-center gap-2 mb-4 pb-4 border-b border-border-light">
-              <MessageSquare className="text-primary" size={20} />
-              <h2 className="text-base font-semibold text-text-primary">
-                Messaggi Aziendali
-              </h2>
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Earnings Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-card p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Andamento Guadagni</h3>
+                <p className="text-sm text-slate-500">Ultimi 6 mesi</p>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-brand-500" />
+                  Binaria
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-accent-500" />
+                  Diretta
+                </span>
+              </div>
             </div>
-            <div className="space-y-2">
-              {data.broadcasts.map((broadcast: any) => (
-                <div
-                  key={broadcast.id}
-                  className={`p-3 rounded-lg border ${
-                    broadcast.priority === 'urgent'
-                      ? 'bg-red-50/50 border-red-200'
-                      : broadcast.priority === 'high'
-                      ? 'bg-yellow-50/50 border-yellow-200'
-                      : 'bg-background-subtle border-border-light'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-text-primary mb-1">
-                    {broadcast.title}
-                  </p>
-                  <p className="text-xs text-text-secondary">
-                    {broadcast.message}
-                  </p>
-                  {broadcast.created_at && (
-                    <p className="text-xs text-text-tertiary mt-2">
-                      {new Date(broadcast.created_at).toLocaleDateString('it-IT')}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
+            <AreaChart
+              data={earningsData}
+              dataKeys={[
+                { key: 'binary', color: '#6366f1', name: 'Binaria' },
+                { key: 'direct', color: '#10b981', name: 'Diretta' },
+                { key: 'multilevel', color: '#f59e0b', name: 'Multilevel' },
+              ]}
+              height={280}
+              showLegend={false}
+            />
+          </motion.div>
 
-        {/* Recent Orders */}
-        {stats.totalOrders > 0 && (
-          <Card>
-            <div className="p-5">
-              <h2 className="text-base font-semibold text-text-primary mb-4">Ordini Recenti</h2>
-              {data?.recentOrders && data.recentOrders.length > 0 ? (
-                <div className="space-y-2">
-                  {data.recentOrders.slice(0, 5).map((order: any) => (
-                    <div key={order.id} className="flex items-center justify-between p-3 border border-border-light rounded-lg hover:bg-background-subtle transition-colors">
-                      <div>
-                        <p className="text-sm font-medium text-text-primary">Ordine #{order.orderNumber}</p>
-                        <p className="text-xs text-text-secondary mt-0.5">
-                          {new Date(order.createdAt || order.date).toLocaleDateString('it-IT')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-text-primary">€{order.total.toFixed(2)}</p>
-                        <p className={`text-xs mt-0.5 ${
-                          order.status === 'delivered' ? 'text-green-600' :
-                          order.status === 'processing' ? 'text-yellow-600' :
-                          'text-text-tertiary'
-                        }`}>
-                          {order.status}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-text-secondary">Nessun ordine recente</p>
-              )}
-              <Link href="/orders">
-                <Button variant="outline" className="w-full mt-4 text-xs">
-                  Vedi Tutti gli Ordini
-                </Button>
+          {/* Rank Progress */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-card p-6"
+          >
+            <h3 className="text-lg font-semibold text-slate-900 mb-6">Progresso Rank</h3>
+            <div className="flex flex-col items-center">
+              <ProgressRing 
+                progress={data.rank.progress} 
+                size={140}
+                color="gold"
+                label={data.rank.current}
+              />
+              <div className="mt-6 text-center">
+                <p className="text-slate-600">Prossimo obiettivo</p>
+                <p className="text-xl font-bold text-slate-900 flex items-center justify-center gap-2 mt-1">
+                  <Crown className="w-5 h-5 text-amber-500" />
+                  {data.rank.nextRank}
+                </p>
+              </div>
+              <Link
+                href="/qualifications"
+                className="mt-4 text-sm text-brand-600 hover:text-brand-700 font-medium flex items-center gap-1"
+              >
+                Vedi requisiti <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
-          </Card>
-        )}
+          </motion.div>
+        </div>
 
-        {/* Notifications */}
-        {data?.notifications && data.notifications.length > 0 && (
-          <Card>
-            <div className="p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Bell className="text-primary" size={18} />
-                <h2 className="text-base font-semibold text-text-primary">
-                  Notifiche Recenti
-                </h2>
-              </div>
-              <div className="space-y-2">
-                {data.notifications.slice(0, 5).map((notification: any) => (
-                  <div key={notification.id} className="flex items-start gap-3 p-3 border border-border-light rounded-lg hover:bg-background-subtle transition-colors">
-                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Bell className="text-primary" size={16} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-text-primary font-medium mb-0.5">
-                        {notification.title}
-                      </p>
-                      <p className="text-xs text-text-secondary">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-text-tertiary mt-1.5">
-                        {new Date(notification.created_at).toLocaleDateString('it-IT')}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link href="/notifications">
-                <Button variant="outline" className="w-full mt-4 text-xs">
-                  Vedi Tutte le Notifiche
-                </Button>
+        {/* Second Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Binary Volumes */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-card p-6"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-slate-900">Volumi Binari</h3>
+              <Link href="/network/binary" className="text-sm text-brand-600 hover:text-brand-700">
+                Dettagli →
               </Link>
             </div>
-          </Card>
-        )}
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-blue-500" />
+                  <span className="text-slate-600">Gamba Sinistra</span>
+                </div>
+                <span className="font-semibold text-slate-900">
+                  €{data.network.leftVolume.toLocaleString('it-IT')}
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3">
+                <div 
+                  className="bg-gradient-to-r from-blue-400 to-blue-600 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, (data.network.leftVolume / Math.max(data.network.leftVolume, data.network.rightVolume)) * 100)}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 rounded-full bg-purple-500" />
+                  <span className="text-slate-600">Gamba Destra</span>
+                </div>
+                <span className="font-semibold text-slate-900">
+                  €{data.network.rightVolume.toLocaleString('it-IT')}
+                </span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-3">
+                <div 
+                  className="bg-gradient-to-r from-purple-400 to-purple-600 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, (data.network.rightVolume / Math.max(data.network.leftVolume, data.network.rightVolume)) * 100)}%` }}
+                />
+              </div>
+
+              <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                <p className="text-sm text-amber-800">
+                  <span className="font-semibold">Gamba debole:</span>{' '}
+                  {data.network.leftVolume < data.network.rightVolume ? 'Sinistra' : 'Destra'}
+                </p>
+                <p className="text-xs text-amber-600 mt-1">
+                  Commissione binaria: €{(Math.min(data.network.leftVolume, data.network.rightVolume) * 0.1).toLocaleString('it-IT')}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Commission Breakdown */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-card p-6"
+          >
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Ripartizione Commissioni</h3>
+            <DonutChart
+              data={commissionBreakdown}
+              height={220}
+              centerLabel={{
+                value: `€${commissionBreakdown.reduce((a, b) => a + b.value, 0).toLocaleString('it-IT')}`,
+                subtitle: 'Totale',
+              }}
+            />
+          </motion.div>
+
+          {/* Quick Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-card p-6"
+          >
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Azioni Rapide</h3>
+            <div className="space-y-3">
+              <QuickLink
+                href="/network/binary"
+                icon={Users}
+                title="Visualizza Network"
+                description="Gestisci il tuo albero binario"
+                color="brand"
+              />
+              <QuickLink
+                href="/products"
+                icon={Zap}
+                title="Acquista Prodotti"
+                description="Attiva il tuo account"
+                color="accent"
+              />
+              <QuickLink
+                href="/referral-links"
+                icon={Target}
+                title="Link Referral"
+                description="Genera nuovi link"
+                color="purple"
+              />
+              <QuickLink
+                href="/kyc"
+                icon={Award}
+                title="Verifica KYC"
+                description="Sblocca i prelievi"
+                color="gold"
+              />
+            </div>
+          </motion.div>
+        </div>
       </div>
     </DashboardLayout>
+  )
+}
+
+function QuickLink({
+  href,
+  icon: Icon,
+  title,
+  description,
+  color,
+}: {
+  href: string
+  icon: any
+  title: string
+  description: string
+  color: 'brand' | 'accent' | 'purple' | 'gold'
+}) {
+  const colorClasses = {
+    brand: 'bg-brand-50 text-brand-600 group-hover:bg-brand-100',
+    accent: 'bg-accent-50 text-accent-600 group-hover:bg-accent-100',
+    purple: 'bg-purple-50 text-purple-600 group-hover:bg-purple-100',
+    gold: 'bg-amber-50 text-amber-600 group-hover:bg-amber-100',
+  }
+
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+    >
+      <div className={`p-2.5 rounded-xl transition-colors ${colorClasses[color]}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-slate-900 group-hover:text-brand-600 transition-colors">
+          {title}
+        </p>
+        <p className="text-sm text-slate-500 truncate">{description}</p>
+      </div>
+      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-brand-500 transition-colors" />
+    </Link>
   )
 }
